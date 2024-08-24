@@ -2,16 +2,16 @@ import argparse
 import asyncio
 import logging
 from os import getenv
-from statistics import mean
 
 import aiohttp
 import numpy as np
 from tqdm.asyncio import tqdm
+from statistics import mean
 
 from src.embeddings import EmbeddingService
 from src.models import Professor, YesNo
-from src.pinecone_client import PineconeClient
 from src.review_filter import ProfessorFilter
+from src.pinecone_client import PineconeClient
 from src.scrape_professor import scrape_professor
 from src.search_school import search_school_for_professor_links
 
@@ -44,7 +44,6 @@ class ProfessorEmbeddingsProcessor:
         all_professors: ProfessorDictList = []
 
         async with aiohttp.ClientSession() as session:
-
             tasks = [
                 scrape_professor(session, link)
                 for link in tqdm(professor_links, desc="Scraping professors")
@@ -59,14 +58,15 @@ class ProfessorEmbeddingsProcessor:
         batch_data = []
         for professor in professors:
             try:
-                logging.info(f"Generating embedding for professor: {professor.name}")
-
                 # Filter and clean the professor's reviews
                 filtered_reviews = self.filter.filter_reviews(professor.reviews)
-                print(filtered_reviews)
-                tags = professor.tags
+                if not filtered_reviews or len(filtered_reviews) == 0:
+                    logging.warning(f"No reviews found for professor: {professor.name}")
+                    continue  # Skip this professor if no reviews are available
 
                 # Generate embeddings for the tags and reviews
+                logging.info(f"Generating embedding for professor: {professor.name}")
+                tags = professor.tags
                 review_texts = [review.review for review in filtered_reviews]
                 combined_embedding = (
                     self.embedding_service.generate_professor_embedding(
