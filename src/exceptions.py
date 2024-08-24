@@ -3,6 +3,8 @@ class ScrapeException(Exception):
 
     pass
 
+class EmbeddingException(Exception):
+    """Base class for all embedding generation related exceptions."""
 
 class NetworkException(ScrapeException):
     """Raised for network-related errors."""
@@ -20,3 +22,6 @@ class DataException(ScrapeException):
     """Raised for errors in data processing or validation."""
 
     pass
+
+class EmbeddingsDimensionException(Exception):
+    """Raised when the embedding dimension isn't found"""
