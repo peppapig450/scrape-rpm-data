@@ -21,8 +21,9 @@ class PineconeClient:
         logger.debug(f"Embedding shape: {embedding.shape}")
         logger.debug(f"Metadata: {metadata}")
 
-        # Convert embedding to list for Pinecone upsert
-        embedding_list = embedding.tolist()
+        # Ensure the embedding is a 1D list
+        embedding_list = embedding.flatten().tolist()
+        
         try:
             self.index.upsert(vectors=[(professor_id, embedding_list, metadata)])
             logger.info(
@@ -33,13 +34,22 @@ class PineconeClient:
                 f"Error upserting embeddings for professor {professor_id}: {str(e)}",
                 exc_info=True,
             )
-            raise
+            raise 
 
     def upsert_batch(
         self, ids: list[str], embeddings: list[np.ndarray], metadatas: list[dict]
     ):
         vectors = [
-            (id, embedding.tolist(), metadata)
+            (id, embedding.flatten().tolist(), metadata)
             for id, embedding, metadata in zip(ids, embeddings, metadatas)
         ]
-        self.index.upsert(vectors=vectors)
+        
+        try:
+            self.index.upsert(vectors=vectors)
+            logger.info(f"Successfully upserted batch of {len(ids)} professors")
+        except Exception as e:
+            logger.error(
+                f"Error upserting batch of professors: {str(e)}",
+                exc_info=True,
+            )
+            raise
