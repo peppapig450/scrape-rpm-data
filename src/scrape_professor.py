@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from .models import Attendance, Grade, Professor, ProfessorReview, YesNo
+from ..scrape.src.models import Attendance, Grade, Professor, ProfessorReview, YesNo
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,9 @@ def scrape_professor(url: str) -> Professor | None:
         department = get_text_content(
             soup, ".TeacherDepartment__StyledDepartmentLink-fl79e8-0 > b"
         )
-        university = get_text_content(soup, "div.NameTitle__Title-dowf0z-1 > a:nth-child(2)")
+        university = get_text_content(
+            soup, "div.NameTitle__Title-dowf0z-1 > a:nth-child(2)"
+        )
         average_rating = float(
             get_text_content(soup, ".RatingValue__Numerator-qw8sqy-2.liyUjw")
         )
@@ -118,9 +120,11 @@ def scrape_professor(url: str) -> Professor | None:
                 attendence=get_optional_meta_value(
                     review_element,
                     "Attendance",
-                    lambda v: Attendance.MANDATORY
-                    if v == "Mandatory"
-                    else Attendance.NOT_MANDATORY,
+                    lambda v: (
+                        Attendance.MANDATORY
+                        if v == "Mandatory"
+                        else Attendance.NOT_MANDATORY
+                    ),
                 ),
                 grade=get_optional_meta_value(review_element, "Grade", Grade),
                 wouldTakeAgain=get_optional_meta_value(
