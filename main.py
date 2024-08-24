@@ -5,11 +5,11 @@ from os import getenv
 
 from tqdm import tqdm
 
-from src.scrape_professor import scrape_professor
-from src.search_school import search_school_for_professor_links
 from src.embeddings import EmbeddingService
 from src.models import Professor
 from src.pinecone_client import PineconeClient
+from src.scrape_professor import scrape_professor
+from src.search_school import search_school_for_professor_links
 
 # Set up logging configuration
 logging.basicConfig(

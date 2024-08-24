@@ -1,8 +1,8 @@
-from playwright.async_api import async_playwright
-import re
 import logging
+import re
 import urllib.parse
-import asyncio
+
+from playwright.async_api import async_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,9 @@ async def search_school_for_professor_links(
                             full_url = create_href_url(href) if href else None
                             if full_url and full_url not in professor_links:
                                 professor_links.add(full_url)
-                                logging.info(f"Found professor with reviews: {full_url}")
+                                logging.info(
+                                    f"Found professor with reviews: {full_url}"
+                                )
             next_button = page.locator(
                 "button:has-text('Show More')"
             )  # Ensure correct selector
@@ -74,7 +76,9 @@ async def search_school_for_professor_links(
                 async with page.expect_response(
                     lambda response: response.status == 200,
                 ):
-                    await page.locator("button:has-text('Show More')").dispatch_event('click')
+                    await page.locator("button:has-text('Show More')").dispatch_event(
+                        "click"
+                    )
 
             else:
                 logging.info("No more 'Show More' button found. Ending search.")
