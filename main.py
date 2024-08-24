@@ -1,17 +1,18 @@
 import argparse
 import asyncio
 import logging
+import sys
 from os import getenv
+from statistics import mean
 
 import aiohttp
 import numpy as np
 from tqdm.asyncio import tqdm
-from statistics import mean
 
 from src.embeddings import EmbeddingService
 from src.models import Professor, YesNo
-from src.review_filter import ProfessorFilter
 from src.pinecone_client import PineconeClient
+from src.review_filter import ProfessorFilter
 from src.scrape_professor import scrape_professor
 from src.search_school import search_school_for_professor_links
 
@@ -29,6 +30,20 @@ class ProfessorEmbeddingsProcessor:
         self.embedding_service = EmbeddingService()
         self.pinecone_client = PineconeClient(pinecone_api_key, pinecone_index_name)
         self.filter = ProfessorFilter()
+        
+        if not self.test_pinecone_connection():
+            logging.error("Pinecone connection failed. Exiting.")
+            sys.exit(1)
+        
+    def test_pinecone_connection(self) -> bool:
+        """
+        Test the connection to Pinecone.
+        """
+        try:
+            return self.pinecone_client.test_connection()
+        except Exception as e:
+            logging.error(f"Exception occurred during Pinecone connection test: {str(e)}", exc_info=True)
+            return False
 
     async def scrape_school_professors(
         self, school_name: str, max_professor_pages: int
@@ -175,6 +190,7 @@ def main():
         raise ValueError("Pinecone index name not defined.")
 
     runner = ProfessorEmbeddingsProcessor(api_key, index_name)
+    
     runner.run(
         school_name=args.school_name, max_professor_pages=args.max_professor_pages
     )
