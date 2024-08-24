@@ -1,83 +1,65 @@
 from typing import Any
 
 import numpy as np
-import torch
+from numpy.typing import NDArray
 from sentence_transformers import SentenceTransformer
-from transformers import BertModel, BertTokenizer
+from sklearn.preprocessing import normalize
+
 
 
 class EmbeddingService:
     def __init__(self):
-
-        # Initialize SentenceTransformer for sentence embeddings
-        self.sentence_model = SentenceTransformer(
+        self.model = SentenceTransformer(
             "sentence-transformers/all-mpnet-base-v2"
         )
 
-        # Initialize BERT model for token embeddings
-        self.token_model = BertModel.from_pretrained("bert-base-uncased")
-        self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-
-    def generate_sentence_embeddings(self, texts: list[str]):
+    def generate_embeddings(self, texts: list[str]):
         """
         Generate sentence embeddings for a list of texts.
         """
-        return self.sentence_model.encode(
+        return self.model.encode(
             texts, normalize_embeddings=True, convert_to_numpy=True
         )
 
-    def generate_token_embeddings(self, texts: list[str]):
-        """
-        Generate token embeddings for a list of texts.
-        """
-        embeddings: list[Any] = []
-        for text in texts:
-            inputs = self.tokenizer(
-                text, return_tensors="pt", truncation=True, max_length=512
-            )
-            with torch.no_grad():
-                outputs = self.token_model(**inputs)
-            # Use the mean of the last hidden states as the token embedding
-            embedding = outputs.last_hidden_state.mean(1).squeeze().numpy()
-            embeddings.append(embedding)
-        return np.array(embeddings)
-
-    def generate_embeddings(
+    def generate_professor_embedding(
         self,
-        name: str,
-        department: str,
-        university: str,
         tags: list[str],
         review_texts: list[str],
+        weight_tags: float = 0.3,
+        weight_reviews: float = 0.7
     ):
-        """
-        Generate token embeddings for name, department, university, and tags.
-        Generate sentence embeddings for reviews
-        """
-        # Token embeddings
-        name_embedding = self.generate_token_embeddings([name])[0]
-        department_embedding = self.generate_token_embeddings([department])[0]
-        university_embedding = self.generate_token_embeddings([university])[0]
+        
+        embedding_dim = self.model.get_sentence_embedding_dimension() 
+        if not embedding_dim:
+            embedding_dim = 768
 
+        # Generate embeddings for tags
+        tags_embedding: NDArray[Any]
         if not tags:
-            tags_embedding = np.zeros(name_embedding.shape)  # Create a zero vector
+            tags_embedding = np.zeros(embedding_dim)
+            weight_reviews = 1.0 # Increase the weight of reviews when no tags are available
+            weight_tags = 0.0 # And set the weight of tags to 0
         else:
-            tags_embeddings = self.generate_token_embeddings(tags)
+            tags_embeddings = self.generate_embeddings(tags)
             tags_embedding = np.mean(tags_embeddings, axis=0)
+        
+        # Normalize tag embeddings
+        tags_embedding = normalize(tags_embedding.reshape(1, -1))[0] #type:ignore
+
 
         # Sentence embeddings
-        review_embeddings = self.generate_sentence_embeddings(review_texts)
-        avg_review_embedding = np.mean(review_embeddings, axis=0)
+        review_embeddings = self.generate_embeddings(review_texts)
+        review_embedding: NDArray[Any] = np.mean(review_embeddings, axis=0)
+        
+        # Normalize review embedding
+        reviews_embedding: NDArray[Any] = normalize(review_embedding.reshape(1, -1))[0] #type: ignore
+        
+        # Apply weights and combine
+        weighted_tags = tags_embedding * weight_tags
+        weighted_reviews = reviews_embedding * weight_reviews
+        combined_embedding = np.concatenate([weighted_tags, weighted_reviews], axis=1)
+        
+        # Normalize the final combined embedding
+        normalized_embedding = normalize(combined_embedding)
 
-        # Combine all embeddings
-        combine_embeddings = np.concatenate(
-            [
-                name_embedding,
-                department_embedding,
-                university_embedding,
-                tags_embedding,
-                avg_review_embedding,
-            ]
-        )
-
-        return combine_embeddings
+        return normalized_embedding
