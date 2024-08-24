@@ -55,7 +55,7 @@ def scrape_professor(url: str) -> Professor | None:
         name = get_text_content(soup, ".NameTitle__Name-dowf0z-0")
         department = get_text_content(
             soup, ".TeacherDepartment__StyledDepartmentLink-fl79e8-0 > b"
-        )
+        )[: -len("department")]
         university = get_text_content(
             soup, "div.NameTitle__Title-dowf0z-1 > a:nth-child(2)"
         )
