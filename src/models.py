@@ -90,6 +90,10 @@ class Professor(BaseModel):
     tags: list[str]
     reviews: list[ProfessorReview]
 
-
-class ProfessorList(BaseModel):
-    each_item: list[Professor]
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_ascii_text(cls, v):
+        if isinstance(v, str):
+            if not v.isascii():
+                return v.encode('ascii', errors='ignore').decode('ascii')
+        return v
