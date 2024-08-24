@@ -34,3 +34,12 @@ class PineconeClient:
                 exc_info=True,
             )
             raise
+
+    def upsert_batch(
+        self, ids: list[str], embeddings: list[np.ndarray], metadatas: list[dict]
+    ):
+        vectors = [
+            (id, embedding.tolist(), metadata)
+            for id, embedding, metadata in zip(ids, embeddings, metadatas)
+        ]
+        self.index.upsert(vectors=vectors)

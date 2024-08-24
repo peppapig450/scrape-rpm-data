@@ -3,7 +3,9 @@ import asyncio
 import logging
 from os import getenv
 
-from tqdm import tqdm
+import aiohttp
+import numpy as np
+from tqdm.asyncio import tqdm
 
 from src.embeddings import EmbeddingService
 from src.models import Professor
@@ -34,26 +36,28 @@ async def scrape_school_professors(school_name: str, max_professor_pages: int):
     return professor_links
 
 
-def scrape_professor_links(professor_links: set[str]) -> ProfessorDictList:
+async def scrape_professor_links(professor_links: set[str]) -> ProfessorDictList:
     all_professors: ProfessorDictList = []
 
-    for link in tqdm(professor_links, desc="Scraping professors"):
-        professor = scrape_professor(link)
-        if professor:
-            all_professors.append(professor)
+    async with aiohttp.ClientSession() as session:
 
-    return all_professors
+        tasks = [
+            scrape_professor(session, link)
+            for link in tqdm(professor_links, desc="Scraping professors")
+        ]
+        all_professors = await tqdm.gather(*tasks, desc="Scraping professors")
+
+    return [professor for professor in all_professors if professor is not None]
 
 
-def upsert_professors(professors: ProfessorDictList):
+def generate_embeddings_batch(
+    embedding_service: EmbeddingService, professors: ProfessorDictList
+) -> list[tuple[str, np.ndarray, dict]]:
+    batch_data = []
     for professor in professors:
         try:
-            # Validate and parse the professor data
-            logging.info(f"Processing professor: {professor.name}")
-
-            # Generate professor embedding
+            logging.info(f"Generating embedding for professor: {professor.name}")
             review_texts = [review.review for review in professor.reviews]
-            logging.debug(f"Generating embeddings for {len(review_texts)} reviews")
             combined_embedding = embedding_service.generate_embeddings(
                 name=professor.name,
                 department=professor.department,
@@ -61,31 +65,37 @@ def upsert_professors(professors: ProfessorDictList):
                 tags=professor.tags,
                 review_texts=review_texts,
             )
-            logging.info(
-                f"Generated combined embedding of shape {combined_embedding.shape}"
-            )
 
-            # Prepare professor metadata
             professor_metadata = {
                 "name": professor.name,
                 "department": professor.department,
                 "university": professor.university,
                 "averageRating": professor.averageRating,
             }
-            logging.debug(f"Prepared metadata: {professor_metadata}")
 
-            # Upsert professor-level data
             professor_id = professor.name.replace(" ", "_")
-            logging.info(f"Upserting professor data with ID: {professor_id}")
-            pinecone_client.upsert_professor_embeddings(
-                professor_id, combined_embedding, professor_metadata
-            )
-            logging.info(f"Successfully upserted professor {professor.name}")
+            batch_data.append((professor_id, combined_embedding, professor_metadata))
         except Exception as e:
             logging.error(
-                f"Error processing professor {professor.name}: {str(e)}",
-                exc_info=True,
+                f"Error processing professor {professor.name}: {str(e)}", exc_info=True
             )
+
+    return batch_data
+
+
+def upsert_professors_batch(professors: ProfessorDictList, batch_size: int = 100):
+    all_batch_data = generate_embeddings_batch(embedding_service, professors)
+
+    for i in range(0, len(all_batch_data), batch_size):
+        batch = all_batch_data[i : i + batch_size]
+        ids, embeddings, metadatas = zip(*batch)
+
+        try:
+            logging.info(f"Upserting batch of {len(batch)} professors")
+            pinecone_client.upsert_batch(ids, embeddings, metadatas)
+            logging.info(f"Successfully upserted batch of {len(batch)} professors")
+        except Exception as e:
+            logging.error(f"Error upserting batch: {str(e)}", exc_info=True)
 
 
 def main():
@@ -113,10 +123,10 @@ def main():
     )
 
     # Scrape professor details and parse into Pydantic models
-    all_professors = scrape_professor_links(professor_links)
+    all_professors = asyncio.run(scrape_professor_links(professor_links))
 
     # Upsert professor data to Pinecone
-    upsert_professors(all_professors)
+    upsert_professors_batch(all_professors)
 
 
 if __name__ == "__main__":
