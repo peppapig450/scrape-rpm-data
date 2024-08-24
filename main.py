@@ -30,11 +30,11 @@ class ProfessorEmbeddingsProcessor:
         self.embedding_service = EmbeddingService()
         self.pinecone_client = PineconeClient(pinecone_api_key, pinecone_index_name)
         self.filter = ProfessorFilter()
-        
+
         if not self.test_pinecone_connection():
             logging.error("Pinecone connection failed. Exiting.")
             sys.exit(1)
-        
+
     def test_pinecone_connection(self) -> bool:
         """
         Test the connection to Pinecone.
@@ -42,14 +42,22 @@ class ProfessorEmbeddingsProcessor:
         try:
             return self.pinecone_client.test_connection()
         except Exception as e:
-            logging.error(f"Exception occurred during Pinecone connection test: {str(e)}", exc_info=True)
+            logging.error(
+                f"Exception occurred during Pinecone connection test: {str(e)}",
+                exc_info=True,
+            )
             return False
 
     async def scrape_school_professors(
-        self, school_name: str, max_professor_pages: int
+        self,
+        max_professor_links: int,
+        school_name: str | None = None,
+        school_url: str | None = None,
     ):
         professor_links = await search_school_for_professor_links(
-            school_name, max_professor_pages
+            max_professor_links=max_professor_links,
+            school_name=school_name,
+            school_url=school_url,
         )
         return professor_links
 
@@ -123,7 +131,7 @@ class ProfessorEmbeddingsProcessor:
                     ),
                 }
 
-                professor_id = professor.name.replace(" ", "_")
+                professor_id = f"{professor.name.replace(' ', '_')}_{professor.university.replace(' ', '_')}"
                 batch_data.append(
                     (professor_id, combined_embedding, professor_metadata)
                 )
@@ -151,12 +159,18 @@ class ProfessorEmbeddingsProcessor:
             except Exception as e:
                 logging.error(f"Error upserting batch: {str(e)}", exc_info=True)
 
-    def run(self, school_name: str, max_professor_pages: int):
+    def run(
+        self,
+        school_name: str | None = None,
+        school_url: str | None = None,
+        max_professor_links: int = 100,
+    ):
         # Scrape professor links
         professor_links = asyncio.run(
             self.scrape_school_professors(
                 school_name=school_name,
-                max_professor_pages=max_professor_pages,
+                school_url=school_url,
+                max_professor_links=max_professor_links,
             )
         )
 
@@ -172,7 +186,10 @@ def main():
         description="Scrape and upload professor reviews from a school."
     )
     parser.add_argument(
-        "school_name", type=str, help="The name of the school to search."
+        "school_name", type=str, nargs="?", help="The name of the school to search."
+    )
+    parser.add_argument(
+        "school_url", type=str, nargs="?", help="The URL of the school page on Rate My Professors."
     )
     parser.add_argument(
         "--max_professor_pages",
@@ -190,9 +207,9 @@ def main():
         raise ValueError("Pinecone index name not defined.")
 
     runner = ProfessorEmbeddingsProcessor(api_key, index_name)
-    
+
     runner.run(
-        school_name=args.school_name, max_professor_pages=args.max_professor_pages
+        school_name=args.school_name, school_url=args.school_url, max_professor_links=args.max_professor_pages
     )
 
 

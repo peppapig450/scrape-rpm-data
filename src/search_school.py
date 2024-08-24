@@ -13,8 +13,8 @@ def create_href_url(url: str) -> str:
 
 
 async def search_school_for_professor_links(
-    school_name: str, max_professor_links: int = 100
-) -> set[str]:
+    school_name: str | None = None, school_url: str | None = None, max_professor_links: int = 100
+) -> set[str]: 
     search_url = "https://www.ratemyprofessors.com"
     professor_links: set[str] = set()
 
@@ -22,19 +22,30 @@ async def search_school_for_professor_links(
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         page = await browser.new_page()
-        await page.goto(search_url, wait_until="domcontentloaded")
-        logging.info(f"Searching for school: {school_name}")
-        # Search for the school
-        search_input = page.locator("input")
-        await search_input.fill(school_name)
-        await search_input.press("Enter")
-        logging.info("Selecting the first school from search results")
-        school_link = await page.locator("a", has_text="ratings").first.get_attribute(
-            "href"
-        )
-        if school_link:
-            school_link = create_href_url(school_link)
-            await page.goto(school_link, wait_until="domcontentloaded")
+        
+        if school_url:
+            # If a school URL is provided, use it directly
+            logging.info(f"Using provided school URL: {school_url}")
+            await page.goto(school_url, wait_until="domcontentloaded")
+        elif school_name:
+            # Otherwise, perform a search for the school
+            logging.info(f"Starting search for professors at {school_name}")
+            await page.goto(search_url, wait_until="domcontentloaded")
+            logging.info(f"Searching for school: {school_name}")
+            search_input = page.locator("input")
+            await search_input.fill(school_name)
+            await search_input.press("Enter")
+            logging.info("Selecting the first school from search results")
+            school_link = await page.locator("a", has_text="ratings").first.get_attribute(
+                "href"
+            )
+            if school_link:
+                school_link = create_href_url(school_link)
+                await page.goto(school_link, wait_until="domcontentloaded")
+            else:
+                logging.error("No school link found in search results.")
+                return professor_links
+            
         logging.info("Clicking 'View all Professors' link")
         professor_list_link = await page.locator(
             "a", has_text="View all Professors"
