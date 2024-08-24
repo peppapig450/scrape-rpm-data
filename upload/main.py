@@ -1,11 +1,13 @@
+import argparse
 import json
 import logging
-from os import getenv, path
-import sys
+from os import getenv
 
-from .embeddings import EmbeddingService
-from .models import Professor
-from .pinecone_client import PineconeClient
+from pydantic import TypeAdapter
+
+from src.embeddings import EmbeddingService
+from src.models import Professor
+from src.pinecone_client import PineconeClient
 
 # Configure logging
 logging.basicConfig(
@@ -27,10 +29,13 @@ def read_and_upsert_professors(file_path: str):
         with open(file_path, "r") as file:
             professors_data = json.load(file)
 
-        for data in professors_data:
+        professors_data_list = TypeAdapter(list[Professor]).validate_python(
+            professors_data
+        )
+
+        for professor in professors_data_list:
             try:
                 # Validate and parse the professor data
-                professor = Professor(**data)
                 logger.info(f"Processing professor: {professor.name}")
 
                 # Generate professor embedding
@@ -65,7 +70,7 @@ def read_and_upsert_professors(file_path: str):
                 logger.info(f"Successfully upserted professor {professor.name}")
             except Exception as e:
                 logger.error(
-                    f"Error processing professor {data.get('name', 'Unknown')}: {str(e)}",
+                    f"Error processing professor {professor.name}: {str(e)}",
                     exc_info=True,
                 )
 
@@ -74,13 +79,10 @@ def read_and_upsert_professors(file_path: str):
 
 
 if __name__ == "__main__":
-    json_file_path = getenv("PROFESSORS_JSON_PATH")
-    if not json_file_path:
-        print("Error: PROFESSORS_JSON_PATH environment variable is not set.")
-        sys.exit(1)
-    
-    if not path.exists(json_file_path):
-        print(f"Error: File not found: {json_file_path}")
-        sys.exit(1)
-    
-    read_and_upsert_professors(json_file_path)
+    parser = argparse.ArgumentParser(
+        description="Process professor data from a JSON file"
+    )
+    parser.add_argument("json_file", type=str, help="Path to the JSON file")
+    args = parser.parse_args()
+
+    read_and_upsert_professors(args.json_file)

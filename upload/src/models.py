@@ -89,3 +89,7 @@ class Professor(BaseModel):
     numRatings: int = Field(ge=0)
     tags: list[str]
     reviews: list[ProfessorReview]
+
+
+class ProfessorList(BaseModel):
+    each_item: list[Professor]
