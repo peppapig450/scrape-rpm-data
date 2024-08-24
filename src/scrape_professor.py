@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from ..scrape.src.models import Attendance, Grade, Professor, ProfessorReview, YesNo
+from .models import Attendance, Grade, Professor, ProfessorReview, YesNo
 
 logger = logging.getLogger(__name__)
 
