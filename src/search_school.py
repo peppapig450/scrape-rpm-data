@@ -20,7 +20,7 @@ async def search_school_for_professor_links(
 
     logging.info(f"Starting search for professors at {school_name}")
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=False)
         page = await browser.new_page()
         await page.goto(search_url, wait_until="domcontentloaded")
         logging.info(f"Searching for school: {school_name}")
@@ -41,7 +41,10 @@ async def search_school_for_professor_links(
         ).first.get_attribute("href")
         if professor_list_link:
             professor_list_link = create_href_url(professor_list_link)
-            await page.goto(professor_list_link)
+            await page.goto(professor_list_link, wait_until="domcontentloaded")
+
+        await page.locator("button:has-text('Close')").click()
+
         while len(professor_links) <= max_professor_links:
             logging.info(
                 f"Scraping professor links, current count: {len(professor_links)}"
@@ -67,18 +70,16 @@ async def search_school_for_professor_links(
                                 logging.info(
                                     f"Found professor with reviews: {full_url}"
                                 )
-            next_button = page.locator(
-                "button:has-text('Show More')"
-            )  # Ensure correct selector
+            next_button = page.locator("button:has-text('Show More')")
             if await next_button.is_visible():
+                await next_button.scroll_into_view_if_needed()
                 logging.info("Clicking 'Show More' button to load more professors")
+                await next_button.click()
 
                 async with page.expect_response(
                     lambda response: response.status == 200,
                 ):
-                    await page.locator("button:has-text('Show More')").dispatch_event(
-                        "click"
-                    )
+                    await next_button.dispatch_event("click")
 
             else:
                 logging.info("No more 'Show More' button found. Ending search.")
