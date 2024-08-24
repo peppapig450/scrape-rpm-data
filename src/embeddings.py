@@ -57,9 +57,9 @@ class EmbeddingService:
         # Apply weights and combine
         weighted_tags = tags_embedding * weight_tags
         weighted_reviews = reviews_embedding * weight_reviews
-        combined_embedding = np.concatenate([weighted_tags, weighted_reviews], axis=1)
+        combined_embedding = np.concatenate([weighted_tags, weighted_reviews])
         
         # Normalize the final combined embedding
-        normalized_embedding = normalize(combined_embedding)
+        normalized_embedding = normalize(combined_embedding.reshape(1, -1))[0]
 
         return normalized_embedding
