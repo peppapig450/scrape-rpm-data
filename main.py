@@ -186,10 +186,13 @@ def main():
         description="Scrape and upload professor reviews from a school."
     )
     parser.add_argument(
-        "school_name", type=str, nargs="?", help="The name of the school to search."
+        "--name", type=str, nargs="?", help="The name of the school to search."
     )
     parser.add_argument(
-        "school_url", type=str, nargs="?", help="The URL of the school page on Rate My Professors."
+        "--url",
+        type=str,
+        nargs="?",
+        help="The URL of the school page on Rate My Professors.",
     )
     parser.add_argument(
         "--max_professor_pages",
@@ -209,7 +212,9 @@ def main():
     runner = ProfessorEmbeddingsProcessor(api_key, index_name)
 
     runner.run(
-        school_name=args.school_name, school_url=args.school_url, max_professor_links=args.max_professor_pages
+        school_name=args.name,
+        school_url=args.url,
+        max_professor_links=args.max_professor_pages,
     )
 
 
