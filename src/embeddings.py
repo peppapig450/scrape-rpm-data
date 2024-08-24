@@ -21,6 +21,11 @@ class EmbeddingService:
             texts, normalize_embeddings=True, convert_to_numpy=True
         )
 
+    # TODO: right now the dimensions for the embeddings returned if they're combined 
+    # is 1536, since they're duplicated
+    # Either we can reduce the dimensions, which im not sure is a good idea
+    # or generate them a different way 
+    # either way TODO: investigate more
     def generate_professor_embedding(
         self,
         tags: list[str],
@@ -34,17 +39,17 @@ class EmbeddingService:
             embedding_dim = 768
 
         # Generate embeddings for tags
-        tags_embedding: NDArray[Any]
-        if not tags:
-            tags_embedding = np.zeros(embedding_dim)
-            weight_reviews = 1.0 # Increase the weight of reviews when no tags are available
-            weight_tags = 0.0 # And set the weight of tags to 0
-        else:
-            tags_embeddings = self.generate_embeddings(tags)
-            tags_embedding = np.mean(tags_embeddings, axis=0)
+        #tags_embedding: NDArray[Any]
+        #if not tags:
+        #    tags_embedding = np.zeros(embedding_dim)
+        #    weight_reviews = 1.0 # Increase the weight of reviews when no tags are available
+        #    weight_tags = 0.0 # And set the weight of tags to 0
+        #else:
+        #    tags_embeddings = self.generate_embeddings(tags)
+        #    tags_embedding = np.mean(tags_embeddings, axis=0)
         
         # Normalize tag embeddings
-        tags_embedding = normalize(tags_embedding.reshape(1, -1))[0] #type:ignore
+        #tags_embedding = normalize(tags_embedding.reshape(1, -1))[0] #type:ignore
 
 
         # Sentence embeddings
@@ -55,11 +60,11 @@ class EmbeddingService:
         reviews_embedding: NDArray[Any] = normalize(review_embedding.reshape(1, -1))[0] #type: ignore
         
         # Apply weights and combine
-        weighted_tags = tags_embedding * weight_tags
-        weighted_reviews = reviews_embedding * weight_reviews
-        combined_embedding = np.concatenate([weighted_tags, weighted_reviews])
+        #weighted_tags = tags_embedding * weight_tags
+        #weighted_reviews = reviews_embedding * weight_reviews
+        #combined_embedding = np.concatenate([weighted_tags, weighted_reviews])
         
         # Normalize the final combined embedding
-        normalized_embedding = normalize(combined_embedding.reshape(1, -1))[0]
+        #normalized_embedding = normalize(combined_embedding.reshape(1, -1))
 
-        return normalized_embedding
+        return reviews_embedding
