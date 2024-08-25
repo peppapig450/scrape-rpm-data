@@ -80,6 +80,12 @@ class ProfessorReview(BaseModel):
             return YesNo(v)
         return v
 
+    @field_validator("quality", "difficulty", mode="before")
+    @classmethod
+    def set_max_of_5(cls, v):
+        if isinstance(v, float):
+            return min(v, 5.0)
+
 
 class Professor(BaseModel):
     name: str
@@ -95,5 +101,11 @@ class Professor(BaseModel):
     def validate_ascii_text(cls, v):
         if isinstance(v, str):
             if not v.isascii():
-                return v.encode('ascii', errors='ignore').decode('ascii')
+                return v.encode("ascii", errors="ignore").decode("ascii")
         return v
+
+    @field_validator("averageRating", mode="before")
+    @classmethod
+    def set_max_of_5(cls, v):
+        if isinstance(v, float):
+            return min(v, 5.0)
