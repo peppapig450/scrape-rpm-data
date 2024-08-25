@@ -118,6 +118,7 @@ class ProfessorEmbeddingsProcessor:
                 professor_metadata = {
                     "name": professor.name,
                     "university": professor.university,
+                    "department": professor.department,
                     "averageRating": professor.averageRating,
                     "topReviewsAvgRating": round(top_reviews_avg_rating, 2),
                     "numRatings": professor.numRatings,
