@@ -11,7 +11,7 @@ class PineconeClient:
     def __init__(self, api_key: str, index_name: str):
         self.pc = Pinecone(api_key)
         self.index = self.pc.Index(
-            host="https://scraped-rpm-knowledge-base-gz59xn8.svc.aped-4627-b74a.pinecone.io"
+            host="https://rpm-professor-reviews-prod-gz59xn8.svc.aped-4627-b74a.pinecone.io"
         )
         self.existing_ids: set[str] = set()  # Set to keep track of existing IDs
         self.refresh_existing_ids()
