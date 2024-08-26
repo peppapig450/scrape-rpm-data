@@ -38,12 +38,8 @@ class PineconeClient:
         Refresh the set of existing IDs from Pinecone.
         """
         try:
-            # Example: fetch all IDs from the index. Adjust the `fetch` logic as needed.
-            fetch_response = self.index.fetch(
-                ids=["*"]
-            )  # Replace "*" with a specific range if necessary
-            if fetch_response.ids is not None:
-                self.existing_ids = set(fetch_response.ids)
+            for id in self.index.list():
+                self.existing_ids.update(id)
         except Exception as e:
             logger.error(f"Error refreshing existing IDs: {str(e)}", exc_info=True)
             raise
