@@ -73,12 +73,17 @@ async def search_school_for_professor_links(
         elif school_name:
             # Otherwise, perform a search for the school
             logging.info(f"Starting search for professors at {school_name}")
+
             await page.goto(search_url, wait_until="domcontentloaded")
+
             logging.info(f"Searching for school: {school_name}")
+
             search_input = page.locator("input")
             await search_input.fill(school_name)
             await search_input.press("Enter")
+
             logging.info("Selecting the first school from search results")
+
             school_link = await page.locator(
                 "a", has_text="ratings"
             ).first.get_attribute("href")
@@ -90,9 +95,11 @@ async def search_school_for_professor_links(
                 return professor_links
 
         logging.info("Clicking 'View all Professors' link")
+
         professor_list_link = await page.locator(
             "a", has_text="View all Professors"
         ).first.get_attribute("href")
+
         if professor_list_link:
             professor_list_link = create_href_url(professor_list_link)
             await page.goto(professor_list_link, wait_until="domcontentloaded")
